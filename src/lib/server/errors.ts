@@ -1,0 +1,3 @@
+export class ApiFailure extends Error { constructor(public status:number,message:string,public code?:string){super(message);} }
+export function invariant(condition:unknown,message:string,status=400,code?:string):asserts condition { if(!condition) throw new ApiFailure(status,message,code); }
+export function errorResponse(error:unknown):Response { if(error instanceof ApiFailure) return Response.json({error:error.message,code:error.code},{status:error.status}); console.error("DARZI request failed",error instanceof Error?error.name:"Unknown error"); return Response.json({error:"The request could not be completed. Please try again.",code:"SERVER_ERROR"},{status:500}); }

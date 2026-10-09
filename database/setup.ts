@@ -1,0 +1,11 @@
+import {readFile} from "node:fs/promises";
+import {Pool} from "pg";
+import {demoState} from "../src/lib/server/seed";
+import {COLLECTIONS,tableName} from "../src/lib/server/model";
+async function main(){
+ if(process.env.NODE_ENV==="production"||process.env.DARZI_DEMO_DATA!=="true"||process.env.NEON_PROJECT_ID!=="icy-grass-38018123"||process.env.NEON_BRANCH_ID!=="br-billowing-flower-b3bfld8x"||!process.env.DATABASE_URL_UNPOOLED)throw new Error("Demo setup requires DARZI_DEMO_DATA=true and the isolated darzi-development branch. Use setup-production.ts for production.");
+ const connection=new URL(process.env.DATABASE_URL_UNPOOLED);
+ if(!["postgres:","postgresql:"].includes(connection.protocol)||connection.hostname.replace("-pooler.",".")!=="ep-purple-recipe-b3k680yf.c-4.ap-southeast-1.aws.neon.tech"||connection.pathname!=="/neondb")throw new Error("Demo setup connection does not match the isolated development database.");
+ connection.hostname=connection.hostname.replace("-pooler.",".");
+ const pool=new Pool({connectionString:connection.toString(),max:1});try{await pool.query(await readFile(new URL("./schema.sql",import.meta.url),"utf8"));const client=await pool.connect();try{await client.query("BEGIN");await client.query("SELECT pg_advisory_xact_lock(43417265)");const count=await client.query("SELECT count(*)::integer AS count FROM darzi.staff");if(count.rows[0].count===0){const state=demoState();state.credentials=[];for(const collection of COLLECTIONS)for(const row of state[collection])await client.query(`INSERT INTO darzi.${tableName(collection)} (id,data) VALUES ($1,$2::jsonb) ON CONFLICT (id) DO NOTHING`,[row.id,JSON.stringify(row)]);await client.query("INSERT INTO darzi.settings (id,data) VALUES ('business',$1::jsonb) ON CONFLICT (id) DO NOTHING",[JSON.stringify(state.settings)]);console.log("Synthetic demonstration data seeded on development branch.");}else console.log("Existing development data preserved.");await client.query("COMMIT");}catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}console.log("DARZI development schema verified.");}finally{await pool.end();}}
+main().catch(error=>{console.error(error instanceof Error?error.message:"Setup failed");process.exitCode=1;});

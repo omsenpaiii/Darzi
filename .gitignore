@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.vercel/
+.env*
+!.env.example
+.darzi/
+*.tsbuildinfo
+.DS_Store
+test-results/
+playwright-report/
+public/private/
+
+.data/
+.vercel

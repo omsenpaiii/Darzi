@@ -1,0 +1,15 @@
+"use client";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowRight, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Button, ErrorMessage, Field } from "./admin-ui";
+import { OwnerSetup } from "./owner-setup";
+import { safeAdminReturnPath } from "@/lib/admin-return-path";
+export function SignIn() {
+ const router=useRouter();const params=useSearchParams();const [email,setEmail]=useState("");const [password,setPassword]=useState("");const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [preview,setPreview]=useState(false);
+ useEffect(()=>{let cancelled=false;fetch("/api/session").then(r=>r.json()).then(result=>{if(!cancelled)setPreview(result.preview === true || result.mode === "local_preview");}).catch(()=>{});return()=>{cancelled=true;};},[]);
+ async function signIn(){setBusy(true);setError("");try{const response=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});const result=await response.json();if(!response.ok)throw new Error(result.error||"Sign-in failed.");router.replace(safeAdminReturnPath(params.get("next")));}catch(e){setError(e instanceof Error?e.message:"Unable to sign in. Please retry.");}finally{setBusy(false);}}
+ if(params.get("setup"))return <OwnerSetup email={params.get("setup")!}/>;
+ return <div className="admin-sign-in"><section className="admin-sign-in-story"><Link href="/" className="admin-sign-in-wordmark">DARZI</Link><div><h1>Behind every<br/><em>remarkable detail.</em></h1><p>The atelier workspace.<br/>Australia & India, working as one.</p></div><span><ShieldCheck size={17}/>Private team access</span></section><section className="admin-sign-in-form"><div><LockKeyhole size={23}/><h2>Welcome to the atelier.</h2><p>Sign in to continue your work.</p><form onSubmit={e=>{e.preventDefault();void signIn();}}><Field label="Email address"><input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required/></Field><Field label="Password"><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></Field><ErrorMessage message={error}/><Button type="submit" busy={busy}>Sign in<ArrowRight size={17}/></Button></form>{preview&&<div className="admin-demo-access"><span>Development preview accounts</span><button onClick={()=>{setEmail("owner@darzi.test");setPassword("DarziPreview2026!");}}>Super admin</button><button onClick={()=>{setEmail("melbourne@darzi.test");setPassword("DarziPreview2026!");}}>Australia</button><button onClick={()=>{setEmail("workshop@darzi.test");setPassword("DarziPreview2026!");}}>India</button><small>Synthetic data · Preview accounts for the development branch.</small></div>}<p className="admin-sign-in-help">Need access or a password reset? Contact your workspace Super admin.</p><Link href="/" className="admin-text-link">Return to DARZI<ArrowRight size={14}/></Link></div></section></div>;
+}

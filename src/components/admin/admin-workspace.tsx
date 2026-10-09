@@ -1,0 +1,30 @@
+"use client";
+import { Overview, Orders, OrderDetail } from "./orders-overview";
+import { Production } from "./production";
+import { Intake } from "./intake";
+import { ItemDetail } from "./item-detail";
+import { Leads, Customers } from "./crm";
+import { Scan, Labels, Legacy } from "./scan-labels";
+import { Settings } from "./settings";
+import { Appointments, Attendance, Revenue } from "./operations";
+import { SignIn } from "./sign-in";
+import { Empty } from "./admin-ui";
+export function AdminWorkspace({segments=[]}:{segments?:string[]}) {
+ const [screen,id]=segments;
+ if(!screen)return <Overview/>;
+ if(screen==="sign-in")return <SignIn/>;
+ if(screen==="orders")return id?<OrderDetail id={id}/>:<Orders/>;
+ if(screen==="production")return <Production/>;
+ if(screen==="intake")return <Intake/>;
+ if(screen==="items")return id?<ItemDetail itemId={id}/>:<Empty title="Choose a garment to continue"/>;
+ if(screen==="leads")return <Leads/>;
+ if(screen==="customers")return <Customers id={id}/>;
+ if(screen==="scan")return <Scan/>;
+ if(screen==="labels")return <Labels/>;
+ if(screen==="legacy")return <Legacy/>;
+ if(screen==="settings")return <Settings/>;
+ if(screen==="appointments")return <Appointments/>;
+ if(screen==="attendance")return <Attendance/>;
+ if(screen==="revenue")return <Revenue/>;
+ return <Empty title="This workspace page could not be found"/>;
+}
