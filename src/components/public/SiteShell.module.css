@@ -1,0 +1,22 @@
+.header:global(.home-header) {
+  isolation: isolate;
+  mix-blend-mode: normal;
+}
+.header:global(.home-header)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: rgb(14 19 18 / 80%);
+  -webkit-backdrop-filter: blur(18px) saturate(115%);
+  backdrop-filter: blur(18px) saturate(115%);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 8%);
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.header:global(.home-header)[data-scrolled='true']::before { opacity: 1; }
+.header:global(.home-header):global(.menu-is-open)::before { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .header:global(.home-header)::before { transition: none; }
+}

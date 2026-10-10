@@ -9,7 +9,10 @@ async function get(path: string, cookie = "") {
 }
 async function signIn(email: string) {
   const response = await fetch(`${origin}/api/session`, { method: "POST", headers: { "Content-Type": "application/json", Origin: origin }, body: JSON.stringify({ email, password: "DarziPreview2026!" }) });
-  assert.equal(response.status, 200);
+  if (response.status !== 200) {
+    const failure = await response.json();
+    assert.fail(`Development QR sign-in failed (${response.status}): ${failure.error || failure.code || 'Unknown error'}`);
+  }
   const cookie = response.headers.getSetCookie().map(value => value.split(";")[0]).join("; ");
   const state = await get("/api/admin/state", cookie);
   assert.equal(state.status, 200);

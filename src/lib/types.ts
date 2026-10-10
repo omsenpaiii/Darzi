@@ -8,7 +8,7 @@ export const AUSTRALIA_STAGES = ["new_order","in_production","shipping","receive
 export type AustraliaStage = typeof AUSTRALIA_STAGES[number];
 export function australiaStage(item: Pick<GarmentItem,"stage">): AustraliaStage { if (item.stage === "draft" || item.stage === "new_order") return "new_order"; if (INDIA_STAGES.includes(item.stage) && item.stage !== "shipping") return "in_production"; return item.stage as AustraliaStage; }
 export const AUSTRALIA_STAGE_LABELS: Record<AustraliaStage,string> = {new_order:"To send to India",in_production:"In production · India",shipping:"In transit · Australia",received_australia:"Received in Australia",trial_ready:"Trial ready",alterations:"Alterations",pickup_ready:"Pickup ready",completed:"Completed"};
-export interface StaffUser { id:string; name:string; email:string; role:Role; team:Team; active:boolean; }
+export interface StaffUser { id:string; name:string; email:string; role:Role; team:Team; active:boolean; authUserId?:string; activationPending?:boolean; }
 export interface Session { user:StaffUser; mode:"local_preview"|"neon"; expiresAt?:string; demoData?:boolean; }
 export interface Customer { id:string; name:string; email?:string; phone?:string; notes?:string; createdAt:string; }
 export interface FileAttachment { id:string; name:string; mimeType:string; size:number; url:string; createdAt:string; }

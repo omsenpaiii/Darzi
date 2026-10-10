@@ -1,11 +1,13 @@
 import "server-only";
-import {randomUUID} from "node:crypto";
+import {createHash,randomBytes,randomUUID} from "node:crypto";
 import type {Appointment,BusinessSettings,Customer,Lead,StaffUser} from "@/lib/types";
-import {transaction} from "./store";
+import {transaction,localPreviewEnabled} from "./store";
 import {requireAustralia,requireOwner} from "./auth";
 import {invariant} from "./errors";
 import {text,validDate} from "./workspace";
 import type {StoredState} from "./model";
+import {publicUser,type StoredStaffUser} from "./model";
+import {legacyDemoIdentityAllowed} from "@/lib/staff-identity";
 function activity(state:StoredState,user:StaffUser,message:string,type="admin"){state.activity.unshift({id:randomUUID(),actorId:user.id,actorName:user.name,type,message,createdAt:new Date().toISOString()});}
 export async function updateLead(id:string,input:Partial<Lead>&{note?:string},user:StaffUser){requireAustralia(user);return transaction(state=>{
  const lead=state.leads.find(row=>row.id===id);invariant(lead,"Lead not found.",404);
@@ -46,5 +48,53 @@ export async function saveAppointment(input:Partial<Appointment>&{expectedStarts
 }
 export async function attendanceAction(input:{action:string;staffId?:string},user:StaffUser){return transaction(state=>{const staffId=input.staffId||user.id;invariant(staffId===user.id||user.role==="super_admin","You can only record your own attendance.",403);invariant(state.staff.some(row=>row.id===staffId&&row.active),"Staff member not found.",404);const date=new Intl.DateTimeFormat("en-CA",{timeZone:state.settings.timezone,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()),record=state.attendance.find(row=>row.staffId===staffId&&row.date===date);if(input.action==="clock_in"){invariant(!record,"Already clocked in for today.",409);const attendance={id:randomUUID(),staffId,date,clockIn:new Date().toISOString()};state.attendance.unshift(attendance);return {attendance};}invariant(input.action==="clock_out"&&record&&!record.clockOut,"Clock in before clocking out; completed attendance cannot be overwritten.",409);record.clockOut=new Date().toISOString();return {attendance:record};});}
 export async function updateSettings(input:Partial<BusinessSettings>,user:StaffUser){requireOwner(user);return transaction(state=>{for(const key of ["businessName","address","phone","email"] as const)if(input[key]!==undefined){invariant(text(input[key],200),`Enter ${key}.`);state.settings[key]=text(input[key],200);}if(input.timezone!==undefined){const zone=text(input.timezone,80);try{new Intl.DateTimeFormat("en-AU",{timeZone:zone}).format();}catch{invariant(false,"Choose a valid IANA timezone, such as Australia/Melbourne.");}state.settings.timezone=zone;}if(input.labelWidthMm!==undefined){invariant(Number.isFinite(input.labelWidthMm)&&input.labelWidthMm>=30&&input.labelWidthMm<=150,"Label width must be 30–150 mm.");state.settings.labelWidthMm=input.labelWidthMm;}if(input.labelHeightMm!==undefined){invariant(Number.isFinite(input.labelHeightMm)&&input.labelHeightMm>=20&&input.labelHeightMm<=150,"Label height must be 20–150 mm.");state.settings.labelHeightMm=input.labelHeightMm;}activity(state,user,"Updated business settings","settings");return {settings:state.settings};});}
-export async function saveStaff(input:Partial<StaffUser>,user:StaffUser,id?:string){requireOwner(user);return transaction(state=>{const existing=id?state.staff.find(row=>row.id===id):undefined;invariant(!id||existing,"Staff member not found.",404);const merged={...existing,...input};invariant(text(merged.name,120)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(merged.email||""),"Enter the staff member's name and email.");invariant(merged.role==="super_admin"||merged.role==="admin","Choose a valid role.");invariant(["AU","IN","ALL"].includes(merged.team||""),"Choose Australia, India or all teams.");invariant(!state.staff.some(row=>row.id!==id&&row.email.toLowerCase()===merged.email?.toLowerCase()),"That email already has staff access.",409);invariant(id!==user.id||merged.active!==false&&merged.role==="super_admin","Keep your own Super Admin account active.",409);const staff:StaffUser={id:existing?.id||randomUUID(),name:text(merged.name,120),email:text(merged.email,200).toLowerCase(),role:merged.role,team:merged.role==="super_admin"?"ALL":merged.team!,active:merged.active!==false};if(existing)Object.assign(existing,staff);else state.staff.push(staff);if(!staff.active)state.sessions=state.sessions.filter(session=>session.userId!==staff.id);activity(state,user,`${existing?"Updated":"Added"} staff access for ${staff.name}`,"staff");return {staff,accountProvisioning:existing?"unchanged":"provider_signup_required",emailDelivery:"not_configured"};});}
+export async function saveStaff(input:Partial<StaffUser>,user:StaffUser,id?:string){
+ requireOwner(user);
+ return transaction(state=>{
+  const existing=id?state.staff.find(row=>row.id===id):undefined;
+  invariant(!id||existing,"Staff member not found.",404);
+  invariant(input.authUserId===undefined&&input.activationPending===undefined,"Managed identity is set only through private account activation.",403);
+  const merged={...existing,...input},email=text(merged.email,200).toLowerCase();
+  invariant(text(merged.name,120)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),"Enter the staff member's name and email.");
+  invariant(!existing?.authUserId||email===existing.email.toLowerCase(),"An activated account's email cannot be changed here. Add a new team member instead.",409);
+  invariant(merged.role==="super_admin"||merged.role==="admin","Choose a valid role.");
+  invariant(["AU","IN","ALL"].includes(merged.team||""),"Choose Australia, India or all teams.");
+  invariant(!state.staff.some(row=>row.id!==id&&row.email.toLowerCase()===email),"That email already has staff access.",409);
+  invariant(id!==user.id||merged.active!==false&&merged.role==="super_admin","Keep your own Super Admin account active.",409);
+  const legacy=!!existing&&!existing.activationPending&&(legacyDemoIdentityAllowed(process.env)||localPreviewEnabled());
+  const pending=!existing?.authUserId&&!legacy;
+  const staff:StoredStaffUser={id:existing?.id||randomUUID(),name:text(merged.name,120),email,role:merged.role,team:merged.role==="super_admin"?"ALL":merged.team!,active:!pending&&merged.active!==false,authUserId:existing?.authUserId,activationPending:pending};
+  if(existing){if(existing.email.toLowerCase()!==email||pending&&input.active===false)delete existing.activationInvite;Object.assign(existing,staff);}else state.staff.push(staff);
+  if(!staff.active)state.sessions=state.sessions.filter(session=>session.userId!==staff.id);
+  activity(state,user,`${existing?"Updated":"Added"} staff access for ${staff.name}`,"staff");
+  return {staff:publicUser(existing||staff,legacy),accountProvisioning:pending?"private_activation_required":"unchanged",emailDelivery:"not_configured"};
+ });
+}
+
+export async function issueStaffActivation(id:string,user:StaffUser){
+ requireOwner(user);
+ invariant(process.env.NEON_AUTH_BASE_URL,"Configure managed authentication before issuing staff invitations.",503);
+ const token=randomBytes(32).toString("base64url"),hash=createHash("sha256").update(token).digest("hex"),expiresAt=new Date(Date.now()+3*24*3600000).toISOString();
+ return transaction(state=>{
+  const staff=state.staff.find(row=>row.id===id);
+  invariant(staff,"Staff member not found.",404);
+  invariant(!staff.authUserId,"This account is already activated. Manage its access instead.",409);
+  invariant(staff.id!==user.id,"Your current account does not need a new activation link.",409);
+  staff.active=false;staff.activationPending=true;staff.activationInvite={email:staff.email,hash,expiresAt};
+  state.sessions=state.sessions.filter(session=>session.userId!==staff.id);
+  activity(state,user,`Created a private activation link for ${staff.name}`,"staff");
+  return {staff:publicUser(staff),setupPath:`/admin/sign-in?activate=${encodeURIComponent(staff.email)}#invite=${token}`,expiresAt,emailDelivery:"not_configured"};
+ });
+}
+
+export async function revokeStaffActivation(id:string,user:StaffUser){
+ requireOwner(user);
+ return transaction(state=>{
+  const staff=state.staff.find(row=>row.id===id);invariant(staff,"Staff member not found.",404);
+  invariant(!staff.authUserId,"This account is already activated. Disable its access instead.",409);
+  delete staff.activationInvite;staff.active=false;staff.activationPending=true;
+  activity(state,user,`Revoked private activation links for ${staff.name}`,"staff");
+  return {staff:publicUser(staff)};
+ });
+}
 export async function receiveShipment(id:string,user:StaffUser){return transaction(state=>{const shipment=state.shipments.find(row=>row.id===id);invariant(shipment,"Shipment not found.",404);invariant(user.role==="super_admin"||user.team==="ALL"||user.team===(shipment.direction==="AU_TO_IN"?"IN":"AU"),"This receipt belongs to the other team.",403);invariant(shipment.status==="in_transit","Shipment is already received.",409);const items=state.items.filter(item=>shipment.itemIds.includes(item.id));invariant(items.length===shipment.itemIds.length,"A shipment item is missing.",409);for(const item of items){invariant(!item.hold,"Resolve item holds before receiving this shipment.",409,"ON_HOLD");invariant(!item.pendingMeasurementRevisionId,"Accept pending measurement revisions before receiving this shipment.",409,"REVISION_PENDING");invariant(item.stage===(shipment.direction==="IN_TO_AU"?"shipping":"received_india"),"An item is no longer at the expected shipment stage.",409,"STAGE_CONFLICT");}shipment.status="received";shipment.receivedAt=new Date().toISOString();for(const item of items){const fromStage=item.stage;if(shipment.direction==="IN_TO_AU"){item.stage="received_australia";item.team="AU";}item.version++;item.updatedAt=new Date().toISOString();state.activity.unshift({id:randomUUID(),actorId:user.id,actorName:user.name,type:"shipment_receipt",message:`Physical receipt: ${shipment.trackingNumber}`,orderId:item.orderId,itemId:item.id,fromStage,toStage:item.stage,createdAt:shipment.receivedAt});}return {shipment};});}

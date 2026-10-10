@@ -4,6 +4,7 @@ import { errorResponse, invariant } from '@/lib/server/errors';
 import { readState, transaction } from '@/lib/server/store';
 import { ownerInviteValid } from '@/lib/owner-invite';
 import type { StaffUser } from '@/lib/types';
+import { authFailureStatus, isDuplicateAuthAccount } from '@/lib/auth-provider-errors';
 
 export const runtime = 'nodejs';
 
@@ -25,11 +26,13 @@ export async function POST(request: Request) {
     let result = await neonAuth().signUp.email({ email, name, password: body.password });
     // Recover an interrupted setup only with the same account's valid password
     // and its still-unused private invite; no password reset is performed here.
-    if (result.error?.code?.startsWith('USER_ALREADY_EXISTS')) result = await neonAuth().signIn.email({ email, password: body.password });
-    invariant(!result.error && result.data?.user?.email.toLowerCase() === email, result.error?.message || 'Account setup could not be completed.', 400, 'AUTH_SETUP_FAILED');
+    if (isDuplicateAuthAccount(result.error)) result = await neonAuth().signIn.email({ email, password: body.password });
+    invariant(!result.error && result.data?.user?.email.toLowerCase() === email && typeof result.data.user.id === 'string' && result.data.user.id.length > 0, result.error?.message || 'Account setup could not be completed.', authFailureStatus(result.error, 400), 'AUTH_SETUP_FAILED');
+    const authUserId = result.data.user.id;
     const user = await transaction(state => {
       invariant(!state.staff.some(staff => staff.email.toLowerCase() === email), 'This setup link has already been used.', 409, 'INVITE_USED');
-      const owner: StaffUser = { id: randomUUID(), name, email, role: 'super_admin', team: 'ALL', active: true };
+      invariant(!state.staff.some(staff => staff.authUserId === authUserId), 'This managed account already has workspace access.', 409);
+      const owner: StaffUser = { id: randomUUID(), name, email, role: 'super_admin', team: 'ALL', active: true, authUserId };
       state.staff.push(owner);
       return owner;
     });

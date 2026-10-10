@@ -1,11 +1,12 @@
 "use client";
 import Link from 'next/link';
+import { BrandWordmark } from "@/components/shared/BrandWordmark";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { Button, ErrorMessage, Field } from './admin-ui';
 
-export function OwnerSetup({ email }: { email: string }) {
+export function OwnerSetup({ email, kind = 'owner' }: { email: string; kind?: 'owner'|'staff' }) {
   const router = useRouter();
   const [token, setToken] = useState('');
   const [name, setName] = useState('');
@@ -25,7 +26,7 @@ export function OwnerSetup({ email }: { email: string }) {
     if (!token) { setError('Open the original private setup link to continue.'); return; }
     setBusy(true); setError('');
     try {
-      const response = await fetch('/api/owner-setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, token, name, password }) });
+      const response = await fetch(kind === 'staff' ? '/api/staff-setup' : '/api/owner-setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, token, name, password }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Account setup could not be completed.');
       setPassword(''); setConfirmation(''); setToken('');
@@ -35,12 +36,12 @@ export function OwnerSetup({ email }: { email: string }) {
   }
   return <div className="admin-sign-in">
     <section className="admin-sign-in-story">
-      <Link href="/" className="admin-sign-in-wordmark">DARZI</Link>
+      <Link href="/" className="admin-sign-in-wordmark" aria-label="Darzi home"><BrandWordmark /></Link>
       <div><h1>Behind every<br /><em>remarkable detail.</em></h1><p>The atelier workspace.<br />Australia & India, working as one.</p></div>
-      <span><ShieldCheck size={17} />Private owner invitation</span>
+      <span><ShieldCheck size={17} />Private {kind === 'staff' ? 'team' : 'owner'} invitation</span>
     </section>
     <section className="admin-sign-in-form"><div>
-      <LockKeyhole size={23} /><h2>Your atelier starts here.</h2><p>Create your Super Admin account.</p>
+      <LockKeyhole size={23} /><h2>Your atelier starts here.</h2><p>{kind === 'staff' ? 'Activate your private workspace account.' : 'Create your Super Admin account.'}</p>
       <form onSubmit={event => { event.preventDefault(); void createAccount(); }}>
         <Field label="Your name"><input autoComplete="name" value={name} onChange={event => setName(event.target.value)} minLength={2} maxLength={80} required /></Field>
         <Field label="Email address"><input type="email" autoComplete="username" value={email} readOnly required /></Field>

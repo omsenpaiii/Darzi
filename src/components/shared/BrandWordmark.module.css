@@ -1,0 +1,21 @@
+.mark {
+  display: inline-flex;
+  align-items: baseline;
+  width: max-content;
+  max-width: 100%;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
+  white-space: nowrap;
+}
+.letters { font: inherit; letter-spacing: inherit; }
+.needle {
+  display: block;
+  flex: none;
+  width: .105em;
+  height: .76em;
+  margin-left: .045em;
+  overflow: visible;
+}

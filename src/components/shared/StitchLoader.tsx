@@ -1,4 +1,5 @@
 import styles from './StitchLoader.module.css';
+import { BrandWordmark } from './BrandWordmark';
 
 /** Decorative, self-contained motion: no player, remote scene or image request. */
 export function StitchMark({ compact = false }: { compact?: boolean }) {
@@ -46,7 +47,7 @@ export function StitchLoader({
   tone?: 'light' | 'dark';
 }) {
   return <div className={`${styles.loader} ${styles[variant]} ${styles[tone]}`} role="status" aria-live="polite" aria-atomic="true">
-    <span className={styles.wordmark} aria-hidden="true">DARZI</span>
+    <span className={styles.wordmark} aria-hidden="true"><BrandWordmark /></span>
     <StitchMark />
     <p className={styles.title} aria-hidden="true">Every stitch matters.</p>
     <p className={styles.label}>{label}</p>

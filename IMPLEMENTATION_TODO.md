@@ -35,6 +35,8 @@ Updated 9 October 2026. Owner: Om + Codex. This is the live delivery checklist f
 
 ## 03 — Public shell and homepage
 - [x] Implement responsive brand header and services dropdown.
+- [x] Use the shared serif DARZ + original needle I wordmark and transparent-to-blurred homepage header.
+- [x] Bound hero media to the pinned section; retain both actions across scroll chapters; browser-check desktop/mobile framing and clean hero exit.
 - [x] Implement mobile navigation disclosure, accessible names and focus handling; full keyboard audit remains pending.
 - [x] Implement immediate hero poster and live HTML heading/CTA.
 - [x] Implement scroll-driven assembly keyframes, reverse scrubbing and static fallback states (no player controls).
@@ -143,7 +145,7 @@ Updated 9 October 2026. Owner: Om + Codex. This is the live delivery checklist f
 - [x] Limit jobs to 50 distinct garments and 1–10 copies; deduplicate selections and reject the entire job for missing/inaccessible/unissued records.
 - [x] Allow completed garments to be included for replacement labels; retain the saved token without changing stage.
 - [x] Use `NEXT_PUBLIC_SITE_URL` as the canonical QR origin and show a localhost-label notice.
-- [ ] Configure and verify the final public HTTPS `NEXT_PUBLIC_SITE_URL` before issuing phone/workshop labels.
+- [x] Configure and verify `https://darzi-platform.vercel.app` as the public HTTPS site/QR origin and production Auth trusted domain; update these together at business-domain cutover.
 - [x] Keep the routine next-stage control visible in the item inspector/mobile action area.
 - [x] Implement Scan next and clear save acknowledgement.
 - [x] Render explicit label previews with generation retry, configured stock dimensions and zero-margin print pages; Print opens the system dialog.
@@ -157,6 +159,7 @@ Updated 9 October 2026. Owner: Om + Codex. This is the live delivery checklist f
 
 ## 10 — Team and business operations
 - [x] Super Admin can create/disable staff access and assign fixed presets.
+- [x] Keep new staff pending until private setup; support expiring, single-use, email-bound links with rotation/revocation and immutable managed account ID binding.
 - [x] Australia/India access is visibly reflected in navigation and API responses.
 - [x] Add appointment calendar/list and creation/status actions.
 - [x] Implement dedicated appointment rescheduling with overlap checks and studio/device timezone conversion.
@@ -184,14 +187,14 @@ Updated 9 October 2026. Owner: Om + Codex. This is the live delivery checklist f
 - [x] Provision the new Neon project, separate development/production Auth and private storage; production has schema/business settings without demo or customer records.
 - [ ] Set up real staff managed-auth accounts, invitations/recovery and outgoing mail configuration.
 - [ ] Obtain Trello exports/access and Squarespace/domain/hosting access.
-- [ ] Deploy to a review environment and run a complete smoke check.
+- [x] Deploy the public Vercel review environment and check public pages, canonical metadata, anonymous API guards and responsive opening/navigation. Owner activation and authenticated hosted workflow acceptance remain pending.
 - [ ] Confirm domain switch only after the concrete build/import is reviewed.
 - [ ] Retire Trello/Squarespace only after accepted migration and recovery checks.
 
 ## 12 — Verification and finishing
 - [x] Run typecheck and the latest production build.
 - [x] Pass 11 bootstrap guard rejection checks without database connections; verify both production pooled/direct connections with read-only queries.
-- [x] Retain the earlier 19 backend and 13 appointment/time passing checks (32 total); these suites were not rerun during the latest QR pass.
+- [x] Pass the full 75-check release suite, including backend and appointment regressions, QR, redirect validation, upload limits and private account activation guards.
 - [x] Pass 7 QR generation/unit checks, including independent decoding of generated PNGs and batch/selection/origin validation.
 - [x] Pass 7 Node-reported protected QR-flow checks, including the parent test: anonymous rejection, exact token/ID/number resolution, AU/India access, contact restrictions, invalid labels and unchanged stage/identity.
 - [x] Verify enquiry → Lead → intake → independent item workflow.
@@ -236,16 +239,16 @@ flowchart LR
 
 ## Current external inputs
 
-- New Neon project `darzi-platform` (`icy-grass-38018123`) is provisioned in Singapore. Local development remains isolated. Production branch `br-frosty-recipe-b39v7qnl` has its own Auth/private bucket and schema/settings only; private owner activation, mail configuration, confirmed hosted origin and deployment smoke checks remain required. Explicit schema maintenance command: `DARZI_SETUP_PRODUCTION=true node --env-file=.darzi/production.env --import tsx database/setup-production.ts`; never run it as part of a build.
+- New Neon project `darzi-platform` (`icy-grass-38018123`) is provisioned in Singapore. Local development remains isolated. Production branch `br-frosty-recipe-b39v7qnl` has its own Auth/private bucket and schema/settings only; Vercel review deployment/origin and production trusted-domain checks are complete. Private owner activation, outgoing mail and business cutover remain required. Explicit schema maintenance command: `DARZI_SETUP_PRODUCTION=true node --env-file=.darzi/production.env --import tsx database/setup-production.ts`; never run it as part of a build.
 - Source Trello exports/account access are required for actual migration. Invitation screenshots are context only.
 - Approved photographs/testimonials and policy copy are needed before public launch.
 - HeyGen general scene creation is not exposed by this session’s plugin tools. No new video was generated. The current scroll experience uses seven original matching WebP keyframes; continuous film production still needs a suitable generation workflow and continuity review.
 
 ## Verified development evidence
 
-- The latest QR pass has 7 generation/unit checks and 7 Node-reported protected-flow checks passing. It independently decodes generated PNGs and verifies read-only QR resolution/permissions. The earlier 19 backend and 13 appointment/time checks remain historical passing results (32 total), not suites rerun in this QR pass. Typecheck and the latest `npm run build` passed on 9 October 2026. Earlier independent Postgres reads confirmed committed workflow data; managed sign-out cleared provider cookies and the next protected request returned 401.
-- Scan now prepares explicit existing-garment batches after dispatch, with up to 50 pieces and 10 copies each. Reprints preserve opaque identity and stage; invalid or unavailable selections fail closed. Canonical public-origin configuration, physical camera/printed scanning and actual label output remain launch checks. The browser Print action opened a system dialog, with no physical print verified.
+- The full release run passed 75/75 Node-reported checks, including the earlier backend/appointment suites and QR/activation guards. It independently decodes generated PNGs and verifies protected QR resolution/permissions. An initial parallel run hit a transient sign-in failure; isolated QR and full serial runs passed. Typecheck and build results are recorded in `design/QA.md`. Earlier independent Postgres reads confirmed committed workflow data; managed sign-out cleared provider cookies and the next protected request returned 401.
+- Scan now prepares explicit existing-garment batches after dispatch, with up to 50 pieces and 10 copies each. Reprints preserve opaque identity and stage; invalid or unavailable selections fail closed. Canonical public-origin configuration is complete. Physical camera/printed scanning and actual label output remain launch checks. The browser Print action opened a system dialog, with no physical print verified.
 - Synthetic public browser enquiry saved contact preference, party size and event date, then was converted into a discoverable draft. No outgoing message was sent.
 - Accepted 98cm source measurements were copied, edited to 101cm and saved in synthetic draft `DZ-2026-1045`; the new garment reopened with 101cm and provenance after process restart. Independent database inspection confirmed the original remains 98cm. Lead follow-up and authentication also survived the fresh process.
 - Synthetic appointment rescheduling was saved/reloaded and cancelled after QA. The final 1100 × 800 modal inspection shows explicit Earlier GMT+11 selection; automated checks cover both occurrences and unchanged instants. Mobile note saving succeeded and shows actor/date, with secondary actions inline above the fixed primary controls. Exact screenshots are listed in `design/QA.md`.
-- Production bootstrap created only schema/business settings; independent reads confirmed no application records outside settings or managed auth users/accounts/sessions at that point. No actual legacy card/file import, hosted deployment acceptance or live domain change has occurred.
+- Production bootstrap created only schema/business settings; independent reads confirmed no application records outside settings or managed auth users/accounts/sessions at that point. The Vercel review site is live; no actual legacy card/file import, owner activation acceptance or business domain change has occurred.
